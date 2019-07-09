@@ -4,28 +4,41 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Movie;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Illuminate\Validation\Rule;
+
 
 class MovieController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return Movie::all();
+        $title = request()->input('title');
+        $skip = request()->input('skip', 0);
+        $take = request()->input('take', Movie::get()->count());
+
+        if ($title) {
+            return Movie::filter($title, $skip, $take);
+        } else {
+            return Movie::skip($skip)->take($take)->get();
+        }
     }
+    
 
     public function store(Request $request)
     {
-        $movie = new Movie();
+        $validatedData = $request->validate([
+            'title' => [
+                'required', 
+              Rule::unique('movies')
+                  ->where('releaseDate', request('releaseDate'))
+            ],  
+            'director' => 'required',
+            'duration' => 'required|integer|between:1,500',
+            'releaseDate' => 'required',
+            'imageUrl' => 'URL',
+            ]);
 
-        $movie->title = $request->input('title');
-        $movie->director = $request->input('director');
-        $movie->imageUrl = $request->input('imageUrl');
-        $movie->duration = $request->input('duration');
-        $movie->releaseDate = $request->input('releaseDate');
-        $movie->genre = $request->input('genre');
-
-        $movie->save();
-
-        return $movie;
+            $movie = new Movie();
     }
 
     public function show($id)
@@ -35,18 +48,17 @@ class MovieController extends Controller
 
     public function update(Request $request, $id)
     {
-        $movie = Movie::find($id);
-
-        $movie->title = $request->input('title');
-        $movie->director = $request->input('director');
-        $movie->imageUrl = $request->input('imageUrl');
-        $movie->duration = $request->input('duration');
-        $movie->releaseDate = $request->input('releaseDate');
-        $movie->genre = $request->input('genre');
-
-        $movie->save();
-
-        return $movie;
+        $validatedData = $request->validate([
+            'title' => [
+            'required', 
+                Rule::unique('movies')
+                    ->where('releaseDate', request('releaseDate'))->ignore($request->id) 
+                ],  
+            'director' => 'required',
+            'duration' => 'required|integer|between:1,500',
+            'releaseDate' => 'required',
+            'imageUrl' => 'URL',
+            ]);
     }
 
     public function destroy($id)
